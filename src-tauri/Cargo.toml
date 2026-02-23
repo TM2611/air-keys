@@ -1,0 +1,42 @@
+[package]
+name = "air_keys"
+version = "0.1.0"
+description = "Air Keys background dictation assistant"
+authors = ["Air Keys"]
+license = ""
+repository = ""
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "air_keys_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.0", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros", "sync", "time"] }
+async-trait = "0.1.89"
+anyhow = "1.0.102"
+thiserror = "2.0.18"
+reqwest = { version = "0.13.2", features = ["json", "multipart", "rustls"] }
+cpal = "0.17.3"
+hound = "3.5.1"
+arboard = "3.6.1"
+enigo = "0.6.1"
+tauri-plugin-stronghold = "2.3.1"
+once_cell = "1.21.3"
+chrono = "0.4.44"
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+[profile.dev.package.scrypt]
+opt-level = 3
