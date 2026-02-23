@@ -1,5 +1,5 @@
 import './App.css'
-import { SettingsPage } from './settings/SettingsPage'
+import { SettingsPage } from './settings/SettingsPage.tsx'
 
 function App() {
   return <SettingsPage />
