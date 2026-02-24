@@ -26,16 +26,21 @@ function parseInvokeError(error: unknown): string {
 export function SettingsPage() {
     const [apiKey, setApiKey] = useState('')
     const [hasKey, setHasKey] = useState(false)
+    const [isCheckingStatus, setIsCheckingStatus] = useState(true)
     const [saveState, setSaveState] = useState<SaveState>('idle')
     const [errorMessage, setErrorMessage] = useState('')
 
     const refreshKeyStatus = async () => {
-        if (!hasTauriInvoke()) {
-            throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+        setIsCheckingStatus(true)
+        try {
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            const status = await invoke<boolean>('has_deepgram_api_key')
+            setHasKey(status)
+        } finally {
+            setIsCheckingStatus(false)
         }
-        const status = await invoke<boolean>('has_deepgram_api_key')
-        console.log(status)
-        setHasKey(status)
     }
 
     useEffect(() => {
@@ -131,7 +136,8 @@ export function SettingsPage() {
                 </div>
             </form>
             <p className="settings-status">
-                Stored key: <strong>{hasKey ? 'present' : 'not set'}</strong>
+                Stored key:{' '}
+                <strong>{isCheckingStatus ? 'checking...' : hasKey ? 'present' : 'not set'}</strong>
             </p>
             {errorMessage ? <p className="settings-error">{errorMessage}</p> : null}
         </main>

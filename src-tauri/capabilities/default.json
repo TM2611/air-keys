@@ -6,7 +6,6 @@
     "settings"
   ],
   "permissions": [
-    "core:default",
-    "stronghold:default"
+    "core:default"
   ]
 }

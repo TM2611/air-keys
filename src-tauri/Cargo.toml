@@ -31,12 +31,8 @@ cpal = "0.17.3"
 hound = "3.5.1"
 arboard = "3.6.1"
 enigo = "0.6.1"
-tauri-plugin-stronghold = "2.3.1"
 once_cell = "1.21.3"
 chrono = "0.4.44"
 
 [target."cfg(windows)".dependencies]
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
-
-[profile.dev.package.scrypt]
-opt-level = 3
