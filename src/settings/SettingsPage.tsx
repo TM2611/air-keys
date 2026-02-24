@@ -5,6 +5,8 @@ import { invoke } from '@tauri-apps/api/core'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
+const API_KEY_MASK = '••••••••••••'
+
 function hasTauriInvoke(): boolean {
     if (typeof window === 'undefined') {
         return false
@@ -265,7 +267,8 @@ export function SettingsPage() {
                         type="password"
                         autoComplete="off"
                         spellCheck={false}
-                        value={deepgramApiKey}
+                        value={hasDeepgramKey ? API_KEY_MASK : deepgramApiKey}
+                        readOnly={hasDeepgramKey}
                         onChange={(event) => {
                             setDeepgramApiKey(event.target.value)
                             if (deepgramSaveState !== 'idle') {
@@ -275,7 +278,7 @@ export function SettingsPage() {
                         placeholder="dg_live_..."
                     />
                     <div className="settings-actions">
-                        <button type="submit" disabled={deepgramSaveState === 'saving'}>
+                        <button type="submit" disabled={deepgramSaveState === 'saving' || hasDeepgramKey}>
                             {deepgramSaveButtonText}
                         </button>
                         <button type="button" onClick={onClearDeepgram}>
@@ -340,7 +343,8 @@ export function SettingsPage() {
                                 type="password"
                                 autoComplete="off"
                                 spellCheck={false}
-                                value={geminiApiKey}
+                                value={hasGeminiKey ? API_KEY_MASK : geminiApiKey}
+                                readOnly={hasGeminiKey}
                                 onChange={(event) => {
                                     setGeminiApiKey(event.target.value)
                                     if (geminiSaveState !== 'idle') {
@@ -350,7 +354,7 @@ export function SettingsPage() {
                                 placeholder="AIza..."
                             />
                             <div className="settings-actions">
-                                <button type="submit" disabled={geminiSaveState === 'saving'}>
+                                <button type="submit" disabled={geminiSaveState === 'saving' || hasGeminiKey}>
                                     {geminiSaveButtonText}
                                 </button>
                                 <button type="button" onClick={onClearGemini}>
