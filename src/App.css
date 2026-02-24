@@ -46,6 +46,10 @@
   gap: 0.55rem;
 }
 
+.settings-inline-form {
+  margin-top: 0.75rem;
+}
+
 .settings-form label {
   font-weight: 600;
 }

@@ -14,9 +14,9 @@
       {
         "label": "settings",
         "title": "Air Keys",
-        "width": 560,
-        "height": 480,
-        "resizable": false,
+        "width": 600,
+        "height": 650,
+        "resizable": true,
         "fullscreen": false,
         "visible": false,
         "skipTaskbar": true
@@ -37,9 +37,7 @@
         "focus": false
       }
     ],
-    "security": {
-      "csp": null
-    }
+    "security": { "csp": null }
   },
   "bundle": {
     "active": true,

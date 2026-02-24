@@ -25,26 +25,33 @@ function parseInvokeError(error: unknown): string {
 }
 
 export function SettingsPage() {
-    const [apiKey, setApiKey] = useState('')
-    const [hasKey, setHasKey] = useState(false)
+    const [deepgramApiKey, setDeepgramApiKey] = useState('')
+    const [hasDeepgramKey, setHasDeepgramKey] = useState(false)
+    const [geminiApiKey, setGeminiApiKey] = useState('')
+    const [hasGeminiKey, setHasGeminiKey] = useState(false)
+    const [processingEnabled, setProcessingEnabled] = useState(false)
     const [appVersion, setAppVersion] = useState('...')
     const [launchOnStartupEnabled, setLaunchOnStartupEnabled] = useState(false)
-    const [isCheckingStatus, setIsCheckingStatus] = useState(true)
+    const [isCheckingDeepgramStatus, setIsCheckingDeepgramStatus] = useState(true)
+    const [isCheckingGeminiStatus, setIsCheckingGeminiStatus] = useState(true)
+    const [isCheckingProcessingEnabled, setIsCheckingProcessingEnabled] = useState(true)
     const [isCheckingLaunchOnStartup, setIsCheckingLaunchOnStartup] = useState(true)
     const [isSavingLaunchOnStartup, setIsSavingLaunchOnStartup] = useState(false)
-    const [saveState, setSaveState] = useState<SaveState>('idle')
+    const [isSavingProcessingEnabled, setIsSavingProcessingEnabled] = useState(false)
+    const [deepgramSaveState, setDeepgramSaveState] = useState<SaveState>('idle')
+    const [geminiSaveState, setGeminiSaveState] = useState<SaveState>('idle')
     const [errorMessage, setErrorMessage] = useState('')
 
-    const refreshKeyStatus = async () => {
-        setIsCheckingStatus(true)
+    const refreshDeepgramKeyStatus = async () => {
+        setIsCheckingDeepgramStatus(true)
         try {
             if (!hasTauriInvoke()) {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             const status = await invoke<boolean>('has_deepgram_api_key')
-            setHasKey(status)
+            setHasDeepgramKey(status)
         } finally {
-            setIsCheckingStatus(false)
+            setIsCheckingDeepgramStatus(false)
         }
     }
 
@@ -61,22 +68,50 @@ export function SettingsPage() {
         }
     }
 
+    const refreshGeminiKeyStatus = async () => {
+        setIsCheckingGeminiStatus(true)
+        try {
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            const status = await invoke<boolean>('has_gemini_api_key')
+            setHasGeminiKey(status)
+        } finally {
+            setIsCheckingGeminiStatus(false)
+        }
+    }
+
+    const refreshProcessingEnabled = async () => {
+        setIsCheckingProcessingEnabled(true)
+        try {
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            const enabled = await invoke<boolean>('get_processing_enabled')
+            setProcessingEnabled(enabled)
+        } finally {
+            setIsCheckingProcessingEnabled(false)
+        }
+    }
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
             void Promise.all([
-                refreshKeyStatus(),
+                refreshDeepgramKeyStatus(),
                 refreshLaunchOnStartup(),
+                refreshGeminiKeyStatus(),
+                refreshProcessingEnabled(),
                 getVersion().then((version) => setAppVersion(version)),
             ]).catch((error) => {
-                setSaveState('error')
+                setDeepgramSaveState('error')
                 setErrorMessage(parseInvokeError(error))
             })
         }, 0)
         return () => window.clearTimeout(timer)
     }, [])
 
-    const saveButtonText = useMemo(() => {
-        switch (saveState) {
+    const deepgramSaveButtonText = useMemo(() => {
+        switch (deepgramSaveState) {
             case 'saving':
                 return 'Saving...'
             case 'saved':
@@ -84,44 +119,95 @@ export function SettingsPage() {
             default:
                 return 'Save key'
         }
-    }, [saveState])
+    }, [deepgramSaveState])
 
-    async function onSave(event: FormEvent) {
+    const geminiSaveButtonText = useMemo(() => {
+        switch (geminiSaveState) {
+            case 'saving':
+                return 'Saving...'
+            case 'saved':
+                return 'Saved'
+            default:
+                return 'Save key'
+        }
+    }, [geminiSaveState])
+
+    async function onSaveDeepgram(event: FormEvent) {
         event.preventDefault()
-        if (!apiKey.trim()) {
-            setSaveState('error')
+        if (!deepgramApiKey.trim()) {
+            setDeepgramSaveState('error')
             setErrorMessage('Enter a Deepgram API key before saving.')
             return
         }
 
         try {
-            setSaveState('saving')
+            setDeepgramSaveState('saving')
             setErrorMessage('')
             if (!hasTauriInvoke()) {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
-            await invoke('save_deepgram_api_key', { apiKey })
-            setApiKey('')
-            await refreshKeyStatus()
-            setSaveState('saved')
+            await invoke('save_deepgram_api_key', { apiKey: deepgramApiKey })
+            setDeepgramApiKey('')
+            await refreshDeepgramKeyStatus()
+            setDeepgramSaveState('saved')
         } catch (error) {
-            setSaveState('error')
+            setDeepgramSaveState('error')
             setErrorMessage(`Air Keys could not save the API key: ${parseInvokeError(error)}`)
         }
     }
 
-    async function onClear() {
+    async function onClearDeepgram() {
         try {
             if (!hasTauriInvoke()) {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             await invoke('clear_deepgram_api_key')
-            setApiKey('')
-            setSaveState('idle')
+            setDeepgramApiKey('')
+            setDeepgramSaveState('idle')
             setErrorMessage('')
-            await refreshKeyStatus()
+            await refreshDeepgramKeyStatus()
         } catch (error) {
-            setSaveState('error')
+            setDeepgramSaveState('error')
+            setErrorMessage(`Air Keys could not clear the API key: ${parseInvokeError(error)}`)
+        }
+    }
+
+    async function onSaveGemini(event: FormEvent) {
+        event.preventDefault()
+        if (!geminiApiKey.trim()) {
+            setGeminiSaveState('error')
+            setErrorMessage('Enter a Gemini API key before saving.')
+            return
+        }
+
+        try {
+            setGeminiSaveState('saving')
+            setErrorMessage('')
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            await invoke('save_gemini_api_key', { apiKey: geminiApiKey })
+            setGeminiApiKey('')
+            await refreshGeminiKeyStatus()
+            setGeminiSaveState('saved')
+        } catch (error) {
+            setGeminiSaveState('error')
+            setErrorMessage(`Air Keys could not save the API key: ${parseInvokeError(error)}`)
+        }
+    }
+
+    async function onClearGemini() {
+        try {
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            await invoke('clear_gemini_api_key')
+            setGeminiApiKey('')
+            setGeminiSaveState('idle')
+            setErrorMessage('')
+            await refreshGeminiKeyStatus()
+        } catch (error) {
+            setGeminiSaveState('error')
             setErrorMessage(`Air Keys could not clear the API key: ${parseInvokeError(error)}`)
         }
     }
@@ -136,7 +222,7 @@ export function SettingsPage() {
             await invoke('set_launch_on_startup_enabled', { enabled })
             setLaunchOnStartupEnabled(enabled)
         } catch (error) {
-            setSaveState('error')
+            setDeepgramSaveState('error')
             setErrorMessage(
                 `Air Keys could not update launch on startup: ${parseInvokeError(error)}`
             )
@@ -145,43 +231,63 @@ export function SettingsPage() {
         }
     }
 
+    async function onProcessingEnabledChange(enabled: boolean) {
+        try {
+            setIsSavingProcessingEnabled(true)
+            setErrorMessage('')
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            await invoke('set_processing_enabled', { enabled })
+            setProcessingEnabled(enabled)
+        } catch (error) {
+            setDeepgramSaveState('error')
+            setErrorMessage(`Air Keys could not update processing: ${parseInvokeError(error)}`)
+        } finally {
+            setIsSavingProcessingEnabled(false)
+        }
+    }
+
     return (
         <main className="settings-shell">
             <h1>Air Keys settings</h1>
             <p className="settings-subtitle">Press Alt twice to start/stop dictation.</p>
             <p className="settings-help">
-                Air Keys runs from the system tray. Set your Deepgram API key here.
+                Air Keys runs from the system tray. Configure your transcription and post-processing
+                keys here.
             </p>
 
             <section className="settings-section">
-                <form className="settings-form" onSubmit={onSave}>
+                <form className="settings-form" onSubmit={onSaveDeepgram}>
                     <label htmlFor="deepgramKey">Deepgram API key</label>
                     <input
                         id="deepgramKey"
                         type="password"
                         autoComplete="off"
                         spellCheck={false}
-                        value={apiKey}
+                        value={deepgramApiKey}
                         onChange={(event) => {
-                            setApiKey(event.target.value)
-                            if (saveState !== 'idle') {
-                                setSaveState('idle')
+                            setDeepgramApiKey(event.target.value)
+                            if (deepgramSaveState !== 'idle') {
+                                setDeepgramSaveState('idle')
                             }
                         }}
                         placeholder="dg_live_..."
                     />
                     <div className="settings-actions">
-                        <button type="submit" disabled={saveState === 'saving'}>
-                            {saveButtonText}
+                        <button type="submit" disabled={deepgramSaveState === 'saving'}>
+                            {deepgramSaveButtonText}
                         </button>
-                        <button type="button" onClick={onClear}>
+                        <button type="button" onClick={onClearDeepgram}>
                             Clear key
                         </button>
                     </div>
                 </form>
                 <p className="settings-status">
                     Stored key:{' '}
-                    <strong>{isCheckingStatus ? 'checking...' : hasKey ? 'present' : 'not set'}</strong>
+                    <strong>
+                        {isCheckingDeepgramStatus ? 'checking...' : hasDeepgramKey ? 'present' : 'not set'}
+                    </strong>
                 </p>
             </section>
 
@@ -204,6 +310,62 @@ export function SettingsPage() {
                         ? 'Checking startup setting...'
                         : 'When enabled, Air Keys starts when you sign in to Windows.'}
                 </p>
+            </section>
+
+            <section className="settings-section">
+                <h2>Post-processing</h2>
+                <label className="settings-checkbox" htmlFor="processingEnabled">
+                    <input
+                        id="processingEnabled"
+                        type="checkbox"
+                        checked={processingEnabled}
+                        disabled={isCheckingProcessingEnabled || isSavingProcessingEnabled}
+                        onChange={(event) => {
+                            void onProcessingEnabledChange(event.target.checked)
+                        }}
+                    />
+                    Clean up transcripts with AI
+                </label>
+                <p className="settings-muted">
+                    {isCheckingProcessingEnabled
+                        ? 'Checking post-processing setting...'
+                        : 'When enabled, Air Keys uses Gemini to remove fillers and smooth phrasing.'}
+                </p>
+                {processingEnabled ? (
+                    <>
+                        <form className="settings-form settings-inline-form" onSubmit={onSaveGemini}>
+                            <label htmlFor="geminiKey">Gemini API key</label>
+                            <input
+                                id="geminiKey"
+                                type="password"
+                                autoComplete="off"
+                                spellCheck={false}
+                                value={geminiApiKey}
+                                onChange={(event) => {
+                                    setGeminiApiKey(event.target.value)
+                                    if (geminiSaveState !== 'idle') {
+                                        setGeminiSaveState('idle')
+                                    }
+                                }}
+                                placeholder="AIza..."
+                            />
+                            <div className="settings-actions">
+                                <button type="submit" disabled={geminiSaveState === 'saving'}>
+                                    {geminiSaveButtonText}
+                                </button>
+                                <button type="button" onClick={onClearGemini}>
+                                    Clear key
+                                </button>
+                            </div>
+                        </form>
+                        <p className="settings-status">
+                            Stored key:{' '}
+                            <strong>
+                                {isCheckingGeminiStatus ? 'checking...' : hasGeminiKey ? 'present' : 'not set'}
+                            </strong>
+                        </p>
+                    </>
+                ) : null}
             </section>
 
             {errorMessage ? <p className="settings-error">{errorMessage}</p> : null}

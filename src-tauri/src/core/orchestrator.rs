@@ -11,12 +11,14 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::audio::recorder::Recorder;
-use crate::core::audio_processor::{AudioProcessor, AudioProcessorError};
+use crate::core::audio_processor::{AudioProcessor, AudioProcessorError, TranscriptCleaner};
 use crate::injection::clipboard_injector::ClipboardInjector;
+use crate::settings::stronghold_store::SecureKeyStore;
 
 const TRAY_ID: &str = "air_keys_tray";
 const RECORDING_WINDOW_ID: &str = "recording";
 const RECORDING_AMPLITUDE_EVENT: &str = "recording-amplitude";
+const RECORDING_STATE_EVENT: &str = "recording-state";
 const AMPLITUDE_POLL_MS: u64 = 50;
 /// Offset from bottom of screen (above taskbar/toolbar) in logical pixels.
 const RECORDING_BOTTOM_OFFSET: i32 = 72;
@@ -27,10 +29,17 @@ struct RecordingAmplitudePayload {
     level: f32,
 }
 
+#[derive(Clone, Serialize)]
+struct RecordingStatePayload<'a> {
+    state: &'a str,
+}
+
 pub struct DictationOrchestrator {
     app_handle: AppHandle,
     recorder: Mutex<Recorder>,
     processor: Arc<dyn AudioProcessor>,
+    cleaner: Arc<dyn TranscriptCleaner>,
+    key_store: Arc<dyn SecureKeyStore>,
     injector: ClipboardInjector,
     recording_path: Mutex<Option<PathBuf>>,
     recording_started_at: Mutex<Option<Instant>>,
@@ -39,11 +48,18 @@ pub struct DictationOrchestrator {
 }
 
 impl DictationOrchestrator {
-    pub fn new(app_handle: AppHandle, processor: Arc<dyn AudioProcessor>) -> Result<Self> {
+    pub fn new(
+        app_handle: AppHandle,
+        processor: Arc<dyn AudioProcessor>,
+        cleaner: Arc<dyn TranscriptCleaner>,
+        key_store: Arc<dyn SecureKeyStore>,
+    ) -> Result<Self> {
         Ok(Self {
             app_handle,
             recorder: Mutex::new(Recorder::new()?),
             processor,
+            cleaner,
+            key_store,
             injector: ClipboardInjector::new(),
             recording_path: Mutex::new(None),
             recording_started_at: Mutex::new(None),
@@ -57,7 +73,6 @@ impl DictationOrchestrator {
         if recorder.is_recording() {
             recorder.stop()?;
             self.set_tray_recording(false);
-            self.set_recording_window_visible(false);
             self.stop_level_emitter().await;
             let maybe_path = self.recording_path.lock().await.take();
             let started_at = self.recording_started_at.lock().await.take();
@@ -67,6 +82,7 @@ impl DictationOrchestrator {
                 if let Some(started_at) = started_at {
                     if started_at.elapsed() < MIN_RECORDING_DURATION {
                         let _ = std::fs::remove_file(&path);
+                        self.set_recording_window_visible(false);
                         log::info!(
                             "discarded short recording (< {}ms)",
                             MIN_RECORDING_DURATION.as_millis()
@@ -74,8 +90,10 @@ impl DictationOrchestrator {
                         return Ok(());
                     }
                 }
+                self.emit_recording_state("processing");
                 self.transcribe_and_inject(path).await?;
             }
+            self.set_recording_window_visible(false);
             return Ok(());
         }
 
@@ -91,6 +109,7 @@ impl DictationOrchestrator {
         *self.recording_started_at.lock().await = Some(Instant::now());
         self.set_tray_recording(true);
         self.set_recording_window_visible(true);
+        self.emit_recording_state("listening");
         self.start_level_emitter().await;
         Ok(())
     }
@@ -129,6 +148,12 @@ impl DictationOrchestrator {
         }
     }
 
+    fn emit_recording_state(&self, state: &str) {
+        if let Some(window) = self.app_handle.get_webview_window(RECORDING_WINDOW_ID) {
+            let _ = window.emit(RECORDING_STATE_EVENT, RecordingStatePayload { state });
+        }
+    }
+
     async fn start_level_emitter(&self) {
         self.stop_level_emitter().await;
         let app_handle = self.app_handle.clone();
@@ -161,7 +186,24 @@ impl DictationOrchestrator {
 
         match result {
             Ok(transcript) => {
-                self.injector.inject_text(&transcript).await?;
+                let should_clean = self.key_store.read_processing_enabled().await?;
+                let transcript_to_inject = if should_clean {
+                    match self.cleaner.clean(&transcript).await {
+                        Ok(cleaned) => cleaned,
+                        Err(AudioProcessorError::MissingGeminiApiKey) => {
+                            log::warn!("post-processing enabled but Gemini API key is missing");
+                            transcript
+                        }
+                        Err(err) => {
+                            log::warn!("post-processing failed; using raw transcript: {err}");
+                            transcript
+                        }
+                    }
+                } else {
+                    transcript
+                };
+
+                self.injector.inject_text(&transcript_to_inject).await?;
                 Ok(())
             }
             Err(AudioProcessorError::EmptyTranscript) => {

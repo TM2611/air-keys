@@ -47,6 +47,58 @@ pub async fn has_deepgram_api_key(state: State<'_, SettingsState>) -> Result<boo
 }
 
 #[tauri::command]
+pub async fn save_gemini_api_key(
+    state: State<'_, SettingsState>,
+    api_key: String,
+) -> Result<(), String> {
+    state
+        .store
+        .save_gemini_key(api_key.trim().to_string())
+        .await
+        .map_err(|err| format!("failed to save key: {err}"))
+}
+
+#[tauri::command]
+pub async fn clear_gemini_api_key(state: State<'_, SettingsState>) -> Result<(), String> {
+    state
+        .store
+        .clear_gemini_key()
+        .await
+        .map_err(|err| format!("failed to clear key: {err}"))
+}
+
+#[tauri::command]
+pub async fn has_gemini_api_key(state: State<'_, SettingsState>) -> Result<bool, String> {
+    state
+        .store
+        .read_gemini_key()
+        .await
+        .map(|value| value.is_some())
+        .map_err(|err| format!("failed to read key status: {err}"))
+}
+
+#[tauri::command]
+pub async fn get_processing_enabled(state: State<'_, SettingsState>) -> Result<bool, String> {
+    state
+        .store
+        .read_processing_enabled()
+        .await
+        .map_err(|err| format!("failed to read processing setting: {err}"))
+}
+
+#[tauri::command]
+pub async fn set_processing_enabled(
+    state: State<'_, SettingsState>,
+    enabled: bool,
+) -> Result<(), String> {
+    state
+        .store
+        .save_processing_enabled(enabled)
+        .await
+        .map_err(|err| format!("failed to update processing setting: {err}"))
+}
+
+#[tauri::command]
 pub fn get_launch_on_startup_enabled(app: AppHandle) -> Result<bool, String> {
     app.autolaunch()
         .is_enabled()

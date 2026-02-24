@@ -33,6 +33,10 @@ body,
   min-width: 58px;
 }
 
+.recording-shell-processing .recording-label {
+  color: #93c5fd;
+}
+
 .wave-bars {
   flex: 1;
   height: 40px;
