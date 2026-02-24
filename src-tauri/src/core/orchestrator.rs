@@ -7,7 +7,7 @@ use tauri::AppHandle;
 use tokio::sync::Mutex;
 
 use crate::audio::recorder::Recorder;
-use crate::core::audio_processor::AudioProcessor;
+use crate::core::audio_processor::{AudioProcessor, AudioProcessorError};
 use crate::injection::clipboard_injector::ClipboardInjector;
 
 const TRAY_ID: &str = "air_keys_tray";
@@ -70,13 +70,19 @@ impl DictationOrchestrator {
     }
 
     async fn transcribe_and_inject(&self, path: PathBuf) -> Result<()> {
-        let transcript = self
-            .processor
-            .process_file(&path)
-            .await
-            .map_err(|err| anyhow::anyhow!("{err}"))?;
-        self.injector.inject_text(&transcript).await?;
-        let _ = std::fs::remove_file(path);
-        Ok(())
+        let result = self.processor.process_file(&path).await;
+        let _ = std::fs::remove_file(&path);
+
+        match result {
+            Ok(transcript) => {
+                self.injector.inject_text(&transcript).await?;
+                Ok(())
+            }
+            Err(AudioProcessorError::EmptyTranscript) => {
+                log::warn!("dictation captured but transcript was empty; skipping paste");
+                Ok(())
+            }
+            Err(err) => Err(anyhow::anyhow!("{err}")),
+        }
     }
 }

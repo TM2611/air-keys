@@ -13,12 +13,11 @@ mod platform {
     use anyhow::Result;
     use once_cell::sync::Lazy;
     use windows::Win32::Foundation::{HINSTANCE, LPARAM, LRESULT, WPARAM};
-    use windows::Win32::UI::Input::KeyboardAndMouse::{
-        KBDLLHOOKSTRUCT, VK_LMENU, VK_MENU, VK_RMENU,
-    };
+    use windows::Win32::UI::Input::KeyboardAndMouse::{VK_LMENU, VK_MENU, VK_RMENU};
     use windows::Win32::UI::WindowsAndMessaging::{
-        CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
-        UnhookWindowsHookEx, HC_ACTION, MSG, WH_KEYBOARD_LL, WM_KEYUP, WM_SYSKEYUP,
+        CallNextHookEx, DispatchMessageW, GetMessageW, KBDLLHOOKSTRUCT, SetWindowsHookExW,
+        TranslateMessage, UnhookWindowsHookEx, HC_ACTION, MSG, WH_KEYBOARD_LL, WM_KEYUP,
+        WM_SYSKEYUP,
     };
 
     use crate::core::orchestrator::DictationOrchestrator;
@@ -95,7 +94,12 @@ mod platform {
 
         thread::spawn(move || {
             let hook = unsafe {
-                SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), HINSTANCE::default(), 0)
+                SetWindowsHookExW(
+                    WH_KEYBOARD_LL,
+                    Some(keyboard_proc),
+                    Some(HINSTANCE::default()),
+                    0,
+                )
             };
             if hook.is_err() {
                 log::error!("failed to set keyboard hook");
@@ -106,7 +110,7 @@ mod platform {
             let mut msg = MSG::default();
             while unsafe { GetMessageW(&mut msg, None, 0, 0) }.into() {
                 unsafe {
-                    TranslateMessage(&msg);
+                    let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 }
             }

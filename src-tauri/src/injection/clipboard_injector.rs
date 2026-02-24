@@ -1,6 +1,9 @@
 use anyhow::Result;
 use arboard::Clipboard;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use tokio::time::{sleep, Duration};
+
+const PASTE_SETTLE_DELAY_MS: u64 = 120;
 
 pub struct ClipboardInjector;
 
@@ -19,6 +22,9 @@ impl ClipboardInjector {
         enigo.key(Key::Control, Direction::Press)?;
         enigo.key(Key::Unicode('v'), Direction::Click)?;
         enigo.key(Key::Control, Direction::Release)?;
+
+        // Give the target application a moment to read clipboard contents before restoring.
+        sleep(Duration::from_millis(PASTE_SETTLE_DELAY_MS)).await;
 
         match cached_text {
             Some(text) => {

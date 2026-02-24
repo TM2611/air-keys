@@ -42,7 +42,7 @@ impl Recorder {
 
         let wav_spec = WavSpec {
             channels: config.channels(),
-            sample_rate: config.sample_rate().0,
+            sample_rate: config.sample_rate(),
             bits_per_sample: 16,
             sample_format: WavSampleFormat::Int,
         };
