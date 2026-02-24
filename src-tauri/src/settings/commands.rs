@@ -4,6 +4,7 @@ use tauri::{AppHandle, State};
 use tauri_plugin_autostart::ManagerExt;
 
 use super::stronghold_store::SecureKeyStore;
+use super::validation::{validate_deepgram_key, validate_gemini_key};
 
 pub struct SettingsState {
     store: Arc<dyn SecureKeyStore>,
@@ -20,9 +21,12 @@ pub async fn save_deepgram_api_key(
     state: State<'_, SettingsState>,
     api_key: String,
 ) -> Result<(), String> {
+    let trimmed_key = api_key.trim().to_string();
+    validate_deepgram_key(&trimmed_key).await?;
+
     state
         .store
-        .save_deepgram_key(api_key.trim().to_string())
+        .save_deepgram_key(trimmed_key)
         .await
         .map_err(|err| format!("failed to save key: {err}"))
 }
@@ -51,9 +55,12 @@ pub async fn save_gemini_api_key(
     state: State<'_, SettingsState>,
     api_key: String,
 ) -> Result<(), String> {
+    let trimmed_key = api_key.trim().to_string();
+    validate_gemini_key(&trimmed_key).await?;
+
     state
         .store
-        .save_gemini_key(api_key.trim().to_string())
+        .save_gemini_key(trimmed_key)
         .await
         .map_err(|err| format!("failed to save key: {err}"))
 }

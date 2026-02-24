@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 
-type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+type SaveState = 'idle' | 'validating' | 'saving' | 'saved' | 'error'
 
 const API_KEY_MASK = '••••••••••••'
 
@@ -24,6 +24,10 @@ function parseInvokeError(error: unknown): string {
         return error
     }
     return 'Unknown error'
+}
+
+function isInvalidApiKeyError(message: string): boolean {
+    return /(invalid|unauthorized|forbidden|401|403)/i.test(message)
 }
 
 export function SettingsPage() {
@@ -116,6 +120,8 @@ export function SettingsPage() {
 
     const deepgramSaveButtonText = useMemo(() => {
         switch (deepgramSaveState) {
+            case 'validating':
+                return 'Validating...'
             case 'saving':
                 return 'Saving...'
             case 'saved':
@@ -127,6 +133,8 @@ export function SettingsPage() {
 
     const geminiSaveButtonText = useMemo(() => {
         switch (geminiSaveState) {
+            case 'validating':
+                return 'Validating...'
             case 'saving':
                 return 'Saving...'
             case 'saved':
@@ -145,7 +153,7 @@ export function SettingsPage() {
         }
 
         try {
-            setDeepgramSaveState('saving')
+            setDeepgramSaveState('validating')
             setErrorMessage('')
             if (!hasTauriInvoke()) {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
@@ -155,7 +163,12 @@ export function SettingsPage() {
             setDeepgramSaveState('saved')
         } catch (error) {
             setDeepgramSaveState('error')
-            setErrorMessage(`Air Keys could not save the API key: ${parseInvokeError(error)}`)
+            const parsedError = parseInvokeError(error)
+            if (isInvalidApiKeyError(parsedError)) {
+                setErrorMessage('Invalid Deepgram API key. Enter a valid API key and try again.')
+                return
+            }
+            setErrorMessage(`Air Keys could not save the API key: ${parsedError}`)
         }
     }
 
@@ -183,7 +196,7 @@ export function SettingsPage() {
         }
 
         try {
-            setGeminiSaveState('saving')
+            setGeminiSaveState('validating')
             setErrorMessage('')
             if (!hasTauriInvoke()) {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
@@ -193,7 +206,12 @@ export function SettingsPage() {
             setGeminiSaveState('saved')
         } catch (error) {
             setGeminiSaveState('error')
-            setErrorMessage(`Air Keys could not save the API key: ${parseInvokeError(error)}`)
+            const parsedError = parseInvokeError(error)
+            if (isInvalidApiKeyError(parsedError)) {
+                setErrorMessage('Invalid Gemini API key. Enter a valid API key and try again.')
+                return
+            }
+            setErrorMessage(`Air Keys could not save the API key: ${parsedError}`)
         }
     }
 
@@ -276,7 +294,14 @@ export function SettingsPage() {
                         placeholder="dg_live_..."
                     />
                     <div className="settings-actions">
-                        <button type="submit" disabled={deepgramSaveState === 'saving' || hasDeepgramKey}>
+                        <button
+                            type="submit"
+                            disabled={
+                                deepgramSaveState === 'validating' ||
+                                deepgramSaveState === 'saving' ||
+                                hasDeepgramKey
+                            }
+                        >
                             {deepgramSaveButtonText}
                         </button>
                         <button type="button" onClick={onClearDeepgram}>
@@ -352,7 +377,14 @@ export function SettingsPage() {
                                 placeholder="AIza..."
                             />
                             <div className="settings-actions">
-                                <button type="submit" disabled={geminiSaveState === 'saving' || hasGeminiKey}>
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        geminiSaveState === 'validating' ||
+                                        geminiSaveState === 'saving' ||
+                                        hasGeminiKey
+                                    }
+                                >
                                     {geminiSaveButtonText}
                                 </button>
                                 <button type="button" onClick={onClearGemini}>
