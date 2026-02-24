@@ -28,9 +28,11 @@ function parseInvokeError(error: unknown): string {
 
 export function SettingsPage() {
     const [deepgramApiKey, setDeepgramApiKey] = useState('')
-    const [hasDeepgramKey, setHasDeepgramKey] = useState(false)
     const [geminiApiKey, setGeminiApiKey] = useState('')
-    const [hasGeminiKey, setHasGeminiKey] = useState(false)
+
+    const hasDeepgramKey = deepgramApiKey === API_KEY_MASK
+    const hasGeminiKey = geminiApiKey === API_KEY_MASK
+
     const [processingEnabled, setProcessingEnabled] = useState(false)
     const [appVersion, setAppVersion] = useState('...')
     const [launchOnStartupEnabled, setLaunchOnStartupEnabled] = useState(false)
@@ -51,7 +53,7 @@ export function SettingsPage() {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             const status = await invoke<boolean>('has_deepgram_api_key')
-            setHasDeepgramKey(status)
+            setDeepgramApiKey(status ? API_KEY_MASK : '')
         } finally {
             setIsCheckingDeepgramStatus(false)
         }
@@ -77,7 +79,7 @@ export function SettingsPage() {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             const status = await invoke<boolean>('has_gemini_api_key')
-            setHasGeminiKey(status)
+            setGeminiApiKey(status ? API_KEY_MASK : '')
         } finally {
             setIsCheckingGeminiStatus(false)
         }
@@ -149,8 +151,7 @@ export function SettingsPage() {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             await invoke('save_deepgram_api_key', { apiKey: deepgramApiKey })
-            setDeepgramApiKey('')
-            await refreshDeepgramKeyStatus()
+            setDeepgramApiKey(API_KEY_MASK)
             setDeepgramSaveState('saved')
         } catch (error) {
             setDeepgramSaveState('error')
@@ -167,7 +168,6 @@ export function SettingsPage() {
             setDeepgramApiKey('')
             setDeepgramSaveState('idle')
             setErrorMessage('')
-            await refreshDeepgramKeyStatus()
         } catch (error) {
             setDeepgramSaveState('error')
             setErrorMessage(`Air Keys could not clear the API key: ${parseInvokeError(error)}`)
@@ -189,8 +189,7 @@ export function SettingsPage() {
                 throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
             }
             await invoke('save_gemini_api_key', { apiKey: geminiApiKey })
-            setGeminiApiKey('')
-            await refreshGeminiKeyStatus()
+            setGeminiApiKey(API_KEY_MASK)
             setGeminiSaveState('saved')
         } catch (error) {
             setGeminiSaveState('error')
@@ -207,7 +206,6 @@ export function SettingsPage() {
             setGeminiApiKey('')
             setGeminiSaveState('idle')
             setErrorMessage('')
-            await refreshGeminiKeyStatus()
         } catch (error) {
             setGeminiSaveState('error')
             setErrorMessage(`Air Keys could not clear the API key: ${parseInvokeError(error)}`)
@@ -267,7 +265,7 @@ export function SettingsPage() {
                         type="password"
                         autoComplete="off"
                         spellCheck={false}
-                        value={hasDeepgramKey ? API_KEY_MASK : deepgramApiKey}
+                        value={deepgramApiKey}
                         readOnly={hasDeepgramKey}
                         onChange={(event) => {
                             setDeepgramApiKey(event.target.value)
@@ -343,7 +341,7 @@ export function SettingsPage() {
                                 type="password"
                                 autoComplete="off"
                                 spellCheck={false}
-                                value={hasGeminiKey ? API_KEY_MASK : geminiApiKey}
+                                value={geminiApiKey}
                                 readOnly={hasGeminiKey}
                                 onChange={(event) => {
                                     setGeminiApiKey(event.target.value)
