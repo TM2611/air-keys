@@ -1,0 +1,3 @@
+# Cursor plans and local data (not committed)
+.cursor/
+node_modules
