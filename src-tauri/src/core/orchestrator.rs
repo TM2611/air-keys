@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -20,6 +20,7 @@ const RECORDING_AMPLITUDE_EVENT: &str = "recording-amplitude";
 const AMPLITUDE_POLL_MS: u64 = 50;
 /// Offset from bottom of screen (above taskbar/toolbar) in logical pixels.
 const RECORDING_BOTTOM_OFFSET: i32 = 72;
+const MIN_RECORDING_DURATION: Duration = Duration::from_millis(500);
 
 #[derive(Clone, Serialize)]
 struct RecordingAmplitudePayload {
@@ -32,6 +33,7 @@ pub struct DictationOrchestrator {
     processor: Arc<dyn AudioProcessor>,
     injector: ClipboardInjector,
     recording_path: Mutex<Option<PathBuf>>,
+    recording_started_at: Mutex<Option<Instant>>,
     amplitude_level: Arc<AtomicU32>,
     level_emitter_task: Mutex<Option<JoinHandle<()>>>,
 }
@@ -44,6 +46,7 @@ impl DictationOrchestrator {
             processor,
             injector: ClipboardInjector::new(),
             recording_path: Mutex::new(None),
+            recording_started_at: Mutex::new(None),
             amplitude_level: Arc::new(AtomicU32::new(0.0f32.to_bits())),
             level_emitter_task: Mutex::new(None),
         })
@@ -57,9 +60,20 @@ impl DictationOrchestrator {
             self.set_recording_window_visible(false);
             self.stop_level_emitter().await;
             let maybe_path = self.recording_path.lock().await.take();
+            let started_at = self.recording_started_at.lock().await.take();
             drop(recorder);
 
             if let Some(path) = maybe_path {
+                if let Some(started_at) = started_at {
+                    if started_at.elapsed() < MIN_RECORDING_DURATION {
+                        let _ = std::fs::remove_file(&path);
+                        log::info!(
+                            "discarded short recording (< {}ms)",
+                            MIN_RECORDING_DURATION.as_millis()
+                        );
+                        return Ok(());
+                    }
+                }
                 self.transcribe_and_inject(path).await?;
             }
             return Ok(());
@@ -74,6 +88,7 @@ impl DictationOrchestrator {
             .start(temp_path.clone(), Some(self.amplitude_level.clone()))
             .context("failed to start recording")?;
         *self.recording_path.lock().await = Some(temp_path);
+        *self.recording_started_at.lock().await = Some(Instant::now());
         self.set_tray_recording(true);
         self.set_recording_window_visible(true);
         self.start_level_emitter().await;

@@ -14,8 +14,8 @@
       {
         "label": "settings",
         "title": "Air Keys",
-        "width": 420,
-        "height": 320,
+        "width": 560,
+        "height": 480,
         "resizable": false,
         "fullscreen": false,
         "visible": false,

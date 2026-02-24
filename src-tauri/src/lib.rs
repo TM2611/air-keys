@@ -11,12 +11,14 @@ use core::orchestrator::DictationOrchestrator;
 use hotkey::win32_alt_hook::start_alt_double_tap_listener;
 use processors::deepgram::DeepgramProcessor;
 use settings::commands::{
-    clear_deepgram_api_key, has_deepgram_api_key, save_deepgram_api_key, SettingsState,
+    clear_deepgram_api_key, get_launch_on_startup_enabled, has_deepgram_api_key,
+    save_deepgram_api_key, set_launch_on_startup_enabled, SettingsState,
 };
 use settings::stronghold_store::StrongholdStore;
 use tauri::menu::MenuBuilder;
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
+use tauri_plugin_autostart::MacosLauncher;
 
 const TRAY_ID: &str = "air_keys_tray";
 const MENU_SETTINGS: &str = "settings";
@@ -25,6 +27,10 @@ const MENU_QUIT: &str = "quit";
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None::<Vec<&str>>,
+        ))
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -78,7 +84,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_deepgram_api_key,
             clear_deepgram_api_key,
-            has_deepgram_api_key
+            has_deepgram_api_key,
+            get_launch_on_startup_enabled,
+            set_launch_on_startup_enabled
         ])
         .run(tauri::generate_context!())
         .expect("error while running air keys application");
