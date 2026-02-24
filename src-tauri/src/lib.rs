@@ -68,6 +68,9 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("settings") {
                 let _ = window.hide();
             }
+            if let Some(window) = app.get_webview_window("recording") {
+                let _ = window.hide();
+            }
 
             start_alt_double_tap_listener(orchestrator.clone(), 400)?;
             Ok(())

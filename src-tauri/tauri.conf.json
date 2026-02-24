@@ -20,6 +20,21 @@
         "fullscreen": false,
         "visible": false,
         "skipTaskbar": true
+      },
+      {
+        "label": "recording",
+        "title": "Air Keys Recording",
+        "url": "/recording.html",
+        "width": 220,
+        "height": 84,
+        "resizable": false,
+        "fullscreen": false,
+        "visible": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "focus": false
       }
     ],
     "security": {
