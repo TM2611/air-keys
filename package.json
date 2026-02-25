@@ -1,14 +1,15 @@
 {
   "name": "air-keys",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run sync-version && tsc -b && vite build",
+    "sync-version": "node scripts/sync-version.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "npm run sync-version && tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {

@@ -2,16 +2,13 @@
 
 Air Keys is a Windows tray dictation app that records your voice, transcribes with Deepgram, and pastes the result at your cursor.
 
-## Installation (v1)
+## Quick start
 
-1. Install dependencies:
-   - `npm install`
-2. Build the desktop app:
-   - `npm run tauri:build`
-3. Run the generated installer:
-   - `src-tauri/target/release/bundle/msi/Air Keys_0.1.0_x64_en-US.msi`
-   - (or the `.exe` installer in the same bundle folder)
-4. Launch **Air Keys** from the Windows Start Menu.
+1. Download the latest installer from [GitHub Releases](https://github.com/TM2611/air-keys/releases).
+2. Run the MSI or EXE installer.
+3. Launch **Air Keys** from the Windows Start Menu.
+
+No Node.js, Rust, or build steps required.
 
 ## First-time setup
 
@@ -35,12 +32,21 @@ Air Keys is a Windows tray dictation app that records your voice, transcribes wi
 - Launch on startup toggle
 - Shortcut hint and app version display
 
-## Development commands
+## Building from source
 
-- `npm run dev` - run frontend only.
-- `npm run build` - build the frontend bundle.
-- `npm run tauri:dev` - run Tauri desktop app in development mode.
-- `npm run tauri:build` - build release binaries and installers.
+For contributors who want to build locally:
+
+1. Install dependencies: `npm install`
+2. Build the desktop app: `npm run tauri:build`
+3. Run the generated installer from `src-tauri/target/release/bundle/msi/` or `bundle/nsis/`
+4. Or run in development mode: `npm run tauri:dev`
+
+**Development commands:**
+
+- `npm run dev` - run frontend only
+- `npm run build` - build the frontend bundle
+- `npm run tauri:dev` - run Tauri desktop app in development mode
+- `npm run tauri:build` - build release binaries and installers
 
 ## Notes
 
