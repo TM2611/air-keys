@@ -68,6 +68,28 @@ impl DictationOrchestrator {
         })
     }
 
+    /// Stops the current recording and discards it (no transcription). Shows "Cancelling" then hides the window.
+    pub async fn cancel_recording(&self) -> Result<()> {
+        let mut recorder = self.recorder.lock().await;
+        if !recorder.is_recording() {
+            return Ok(());
+        }
+        recorder.stop()?;
+        self.set_tray_recording(false);
+        self.stop_level_emitter().await;
+        let maybe_path = self.recording_path.lock().await.take();
+        let _started_at = self.recording_started_at.lock().await.take();
+        drop(recorder);
+
+        if let Some(path) = maybe_path {
+            let _ = std::fs::remove_file(&path);
+        }
+        self.emit_recording_state("cancelling");
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        self.set_recording_window_visible(false);
+        Ok(())
+    }
+
     pub async fn handle_alt_double_tap(&self) -> Result<()> {
         let mut recorder = self.recorder.lock().await;
         if recorder.is_recording() {

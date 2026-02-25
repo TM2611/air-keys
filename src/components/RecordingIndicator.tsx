@@ -112,9 +112,14 @@ export default function RecordingIndicator() {
             className={`recording-shell ${state === 'processing' || state === 'cancelling' ? 'recording-shell-processing' : ''}`}
             data-tauri-drag-region
         >
-            <span className="recording-label" data-tauri-drag-region>
-                {state === 'processing' ? 'Processing' : state === 'cancelling' ? 'Cancelling' : 'Listening'}
-            </span>
+            <div className="recording-label-wrap" data-tauri-drag-region>
+                <span className="recording-label">
+                    {state === 'processing' ? 'Processing' : state === 'cancelling' ? 'Cancelling' : 'Listening'}
+                </span>
+                {state === 'listening' && (
+                    <span className="recording-hint">Hold Alt to cancel</span>
+                )}
+            </div>
             <div className="wave-bars" data-tauri-drag-region>
                 {bars.map((barLevel, index) => (
                     <span

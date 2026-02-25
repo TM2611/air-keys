@@ -269,7 +269,8 @@ export function SettingsPage() {
     return (
         <main className="settings-shell">
             <h1>Air Keys settings</h1>
-            <p className="settings-subtitle">Press Alt twice to start/stop dictation.</p>
+            <p className="settings-subtitle">Press Alt twice to start/stop dictation. <br />Hold Alt to cancel in progress recording.</p>
+            <br />
             <p className="settings-help">
                 Air Keys runs from the system tray. Configure your transcription and post-processing
                 keys here.
