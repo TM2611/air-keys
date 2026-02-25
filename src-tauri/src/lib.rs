@@ -17,6 +17,7 @@ use settings::commands::{
     save_gemini_api_key, set_launch_on_startup_enabled, set_processing_enabled, SettingsState,
 };
 use settings::stronghold_store::StrongholdStore;
+use tauri::image::Image;
 use tauri::menu::MenuBuilder;
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
@@ -62,7 +63,13 @@ pub fn run() {
                 .text(MENU_QUIT, "Quit")
                 .build()?;
 
+            let icon_bytes = include_bytes!("../icons/icon.ico");
+            let icon = Image::from_bytes(icon_bytes).map_err(|e| {
+                anyhow::anyhow!("failed to load tray icon: {}", e)
+            })?;
+
             let _tray = TrayIconBuilder::with_id(TRAY_ID)
+                .icon(icon)
                 .menu(&menu)
                 .tooltip("Air Keys - idle")
                 .on_menu_event(move |app_handle, event| match event.id.as_ref() {
