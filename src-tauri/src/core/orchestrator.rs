@@ -82,6 +82,8 @@ impl DictationOrchestrator {
                 if let Some(started_at) = started_at {
                     if started_at.elapsed() < MIN_RECORDING_DURATION {
                         let _ = std::fs::remove_file(&path);
+                        self.emit_recording_state("cancelling");
+                        tokio::time::sleep(Duration::from_millis(400)).await;
                         self.set_recording_window_visible(false);
                         log::info!(
                             "discarded short recording (< {}ms)",
@@ -90,8 +92,16 @@ impl DictationOrchestrator {
                         return Ok(());
                     }
                 }
-                self.emit_recording_state("processing");
-                self.transcribe_and_inject(path).await?;
+                match self.transcribe(path).await? {
+                    Some(transcript) => {
+                        self.emit_recording_state("processing");
+                        self.clean_and_inject(transcript).await?;
+                    }
+                    None => {
+                        self.emit_recording_state("cancelling");
+                        tokio::time::sleep(Duration::from_millis(400)).await;
+                    }
+                }
             }
             self.set_recording_window_visible(false);
             return Ok(());
@@ -180,37 +190,40 @@ impl DictationOrchestrator {
         }
     }
 
-    async fn transcribe_and_inject(&self, path: PathBuf) -> Result<()> {
+    /// Transcribes the recording. Returns `Some(transcript)` when non-empty, `None` when empty (cancelled).
+    async fn transcribe(&self, path: PathBuf) -> Result<Option<String>> {
         let result = self.processor.process_file(&path).await;
         let _ = std::fs::remove_file(&path);
 
         match result {
-            Ok(transcript) => {
-                let should_clean = self.key_store.read_processing_enabled().await?;
-                let transcript_to_inject = if should_clean {
-                    match self.cleaner.clean(&transcript).await {
-                        Ok(cleaned) => cleaned,
-                        Err(AudioProcessorError::MissingGeminiApiKey) => {
-                            log::warn!("post-processing enabled but Gemini API key is missing");
-                            transcript
-                        }
-                        Err(err) => {
-                            log::warn!("post-processing failed; using raw transcript: {err}");
-                            transcript
-                        }
-                    }
-                } else {
-                    transcript
-                };
-
-                self.injector.inject_text(&transcript_to_inject).await?;
-                Ok(())
-            }
+            Ok(transcript) => Ok(Some(transcript)),
             Err(AudioProcessorError::EmptyTranscript) => {
                 log::warn!("dictation captured but transcript was empty; skipping paste");
-                Ok(())
+                Ok(None)
             }
             Err(err) => Err(anyhow::anyhow!("{err}")),
         }
+    }
+
+    async fn clean_and_inject(&self, transcript: String) -> Result<()> {
+        let should_clean = self.key_store.read_processing_enabled().await?;
+        let transcript_to_inject = if should_clean {
+            match self.cleaner.clean(&transcript).await {
+                Ok(cleaned) => cleaned,
+                Err(AudioProcessorError::MissingGeminiApiKey) => {
+                    log::warn!("post-processing enabled but Gemini API key is missing");
+                    transcript
+                }
+                Err(err) => {
+                    log::warn!("post-processing failed; using raw transcript: {err}");
+                    transcript
+                }
+            }
+        } else {
+            transcript
+        };
+
+        self.injector.inject_text(&transcript_to_inject).await?;
+        Ok(())
     }
 }

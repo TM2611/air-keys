@@ -6,7 +6,7 @@ type RecordingAmplitudePayload = {
 }
 
 type RecordingStatePayload = {
-    state: 'listening' | 'processing'
+    state: 'listening' | 'processing' | 'cancelling'
 }
 
 const BAR_COUNT = 9
@@ -28,7 +28,7 @@ export default function RecordingIndicator() {
     const [targetLevel, setTargetLevel] = useState(0)
     const [displayLevel, setDisplayLevel] = useState(0)
     const [phase, setPhase] = useState(0)
-    const [state, setState] = useState<'listening' | 'processing'>('listening')
+    const [state, setState] = useState<'listening' | 'processing' | 'cancelling'>('listening')
 
     useEffect(() => {
         let mounted = true
@@ -39,7 +39,7 @@ export default function RecordingIndicator() {
                     if (!mounted) {
                         return
                     }
-                    if (state === 'processing') {
+                    if (state === 'processing' || state === 'cancelling') {
                         return
                     }
                     setTargetLevel(clampLevel(event.payload.level))
@@ -51,6 +51,11 @@ export default function RecordingIndicator() {
                 }
                 if (event.payload.state === 'processing') {
                     setState('processing')
+                    setTargetLevel(0)
+                    return
+                }
+                if (event.payload.state === 'cancelling') {
+                    setState('cancelling')
                     setTargetLevel(0)
                     return
                 }
@@ -87,7 +92,7 @@ export default function RecordingIndicator() {
     }, [targetLevel])
 
     const bars = useMemo(() => {
-        if (state === 'processing') {
+        if (state === 'processing' || state === 'cancelling') {
             return Array.from({ length: BAR_COUNT }, (_, index) => {
                 const offset = (index / BAR_COUNT) * Math.PI * 1.5
                 const pulse = (Math.sin(phase + offset) + 1) * 0.12
@@ -104,11 +109,11 @@ export default function RecordingIndicator() {
 
     return (
         <main
-            className={`recording-shell ${state === 'processing' ? 'recording-shell-processing' : ''}`}
+            className={`recording-shell ${state === 'processing' || state === 'cancelling' ? 'recording-shell-processing' : ''}`}
             data-tauri-drag-region
         >
             <span className="recording-label" data-tauri-drag-region>
-                {state === 'processing' ? 'Processing' : 'Listening'}
+                {state === 'processing' ? 'Processing' : state === 'cancelling' ? 'Cancelling' : 'Listening'}
             </span>
             <div className="wave-bars" data-tauri-drag-region>
                 {bars.map((barLevel, index) => (
