@@ -108,6 +108,14 @@ pub fn run() {
             get_launch_on_startup_enabled,
             set_launch_on_startup_enabled
         ])
+        .on_window_event(|window, event| {
+            if window.label() == "settings" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running air keys application");
 }
