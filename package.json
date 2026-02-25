@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri:dev": "npm run sync-version && tauri dev",
+    "td": "npm run tauri:dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
