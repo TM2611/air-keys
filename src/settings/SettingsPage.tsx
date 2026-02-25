@@ -356,7 +356,7 @@ export function SettingsPage() {
                 <p className="settings-muted">
                     {isCheckingProcessingEnabled
                         ? 'Checking post-processing setting...'
-                        : 'When enabled, Air Keys uses Gemini to remove fillers and smooth phrasing.'}
+                        : <>When enabled, Air Keys uses Gemini to remove fillers and smooth phrasing. An <span className="settings-ai-badge">AI</span> badge appears on the recording overlay while this is active.</>}
                 </p>
                 {processingEnabled ? (
                     <>

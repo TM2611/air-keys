@@ -45,6 +45,21 @@ body,
   color: #64748b;
 }
 
+.recording-badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  vertical-align: middle;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
 .recording-shell-processing .recording-label {
   color: #93c5fd;
 }

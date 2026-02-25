@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { listen } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/core'
 
 type RecordingAmplitudePayload = {
     level: number
@@ -29,6 +30,13 @@ export default function RecordingIndicator() {
     const [displayLevel, setDisplayLevel] = useState(0)
     const [phase, setPhase] = useState(0)
     const [state, setState] = useState<'listening' | 'processing' | 'cancelling'>('listening')
+    const [postProcessing, setPostProcessing] = useState(false)
+
+    useEffect(() => {
+        invoke<boolean>('get_processing_enabled')
+            .then(setPostProcessing)
+            .catch(() => {})
+    }, [])
 
     useEffect(() => {
         let mounted = true
@@ -115,6 +123,7 @@ export default function RecordingIndicator() {
             <div className="recording-label-wrap" data-tauri-drag-region>
                 <span className="recording-label">
                     {state === 'processing' ? 'Processing' : state === 'cancelling' ? 'Cancelling' : 'Listening'}
+                    {postProcessing && <span className="recording-badge">AI</span>}
                 </span>
                 {state === 'listening' && (
                     <span className="recording-hint">Hold Alt to cancel</span>
