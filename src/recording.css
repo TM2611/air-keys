@@ -26,11 +26,27 @@ body,
   user-select: none;
 }
 
+.recording-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 58px;
+}
+
 .recording-label {
   font-size: 0.82rem;
   letter-spacing: 0.02em;
   color: #cbd5e1;
-  min-width: 58px;
+}
+
+.recording-hint {
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  color: #64748b;
+}
+
+.recording-shell-processing .recording-label {
+  color: #93c5fd;
 }
 
 .wave-bars {

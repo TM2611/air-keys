@@ -5,7 +5,7 @@
 }
 
 .settings-shell {
-  width: min(420px, 92vw);
+  width: min(520px, 94vw);
   margin: 1.25rem auto;
   padding: 1.25rem;
   border-radius: 12px;
@@ -19,14 +19,35 @@
   font-size: 1.3rem;
 }
 
+.settings-subtitle {
+  margin: 0 0 0.35rem;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
 .settings-help {
   margin: 0 0 1rem;
   color: #334155;
 }
 
+.settings-section {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.95rem;
+  margin-top: 0.95rem;
+}
+
+.settings-section h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1rem;
+}
+
 .settings-form {
   display: grid;
   gap: 0.55rem;
+}
+
+.settings-inline-form {
+  margin-top: 0.75rem;
 }
 
 .settings-form label {
@@ -39,17 +60,53 @@
   padding: 0.6rem 0.7rem;
 }
 
+.settings-form input:disabled,
+.settings-form input[readOnly] {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
 .settings-actions {
   display: flex;
   gap: 0.65rem;
 }
 
+.settings-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #e2e8f0;
+}
+
 .settings-status {
-  margin-top: 1rem;
+  margin-top: 0.8rem;
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 500;
+}
+
+.settings-checkbox input {
+  margin: 0;
+}
+
+.settings-muted {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .settings-error {
-  margin: 0.6rem 0 0;
+  margin: 0.8rem 0 0;
   color: #b91c1c;
   font-weight: 600;
+}
+
+.settings-footer {
+  margin: 1rem 0 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
 }

@@ -5,6 +5,10 @@ type RecordingAmplitudePayload = {
     level: number
 }
 
+type RecordingStatePayload = {
+    state: 'listening' | 'processing' | 'cancelling'
+}
+
 const BAR_COUNT = 9
 
 function clampLevel(level: number): number {
@@ -24,24 +28,47 @@ export default function RecordingIndicator() {
     const [targetLevel, setTargetLevel] = useState(0)
     const [displayLevel, setDisplayLevel] = useState(0)
     const [phase, setPhase] = useState(0)
+    const [state, setState] = useState<'listening' | 'processing' | 'cancelling'>('listening')
 
     useEffect(() => {
         let mounted = true
-        const attachListener = async () => {
-            const unlisten = await listen<RecordingAmplitudePayload>(
+        const attachListeners = async () => {
+            const unlistenAmplitude = await listen<RecordingAmplitudePayload>(
                 'recording-amplitude',
                 (event) => {
                     if (!mounted) {
                         return
                     }
+                    if (state === 'processing' || state === 'cancelling') {
+                        return
+                    }
                     setTargetLevel(clampLevel(event.payload.level))
                 },
             )
-            return unlisten
+            const unlistenState = await listen<RecordingStatePayload>('recording-state', (event) => {
+                if (!mounted) {
+                    return
+                }
+                if (event.payload.state === 'processing') {
+                    setState('processing')
+                    setTargetLevel(0)
+                    return
+                }
+                if (event.payload.state === 'cancelling') {
+                    setState('cancelling')
+                    setTargetLevel(0)
+                    return
+                }
+                setState('listening')
+            })
+            return () => {
+                unlistenAmplitude()
+                unlistenState()
+            }
         }
 
         let detachListener: (() => void) | undefined
-        void attachListener().then((unlisten) => {
+        void attachListeners().then((unlisten) => {
             detachListener = unlisten
         }).catch(() => {
             // Running outside Tauri (e.g. plain browser preview) is non-fatal.
@@ -51,7 +78,7 @@ export default function RecordingIndicator() {
             mounted = false
             detachListener?.()
         }
-    }, [])
+    }, [state])
 
     useEffect(() => {
         let frame = 0
@@ -65,19 +92,34 @@ export default function RecordingIndicator() {
     }, [targetLevel])
 
     const bars = useMemo(() => {
+        if (state === 'processing' || state === 'cancelling') {
+            return Array.from({ length: BAR_COUNT }, (_, index) => {
+                const offset = (index / BAR_COUNT) * Math.PI * 1.5
+                const pulse = (Math.sin(phase + offset) + 1) * 0.12
+                return 0.2 + pulse
+            })
+        }
         return Array.from({ length: BAR_COUNT }, (_, index) => {
             const offset = (index / BAR_COUNT) * Math.PI * 1.5
             const ripple = Math.sin(phase + offset) * 0.16
             const normalized = Math.max(0.08, Math.min(1, displayLevel + ripple))
             return normalized
         })
-    }, [displayLevel, phase])
+    }, [displayLevel, phase, state])
 
     return (
-        <main className="recording-shell" data-tauri-drag-region>
-            <span className="recording-label" data-tauri-drag-region>
-                Listening
-            </span>
+        <main
+            className={`recording-shell ${state === 'processing' || state === 'cancelling' ? 'recording-shell-processing' : ''}`}
+            data-tauri-drag-region
+        >
+            <div className="recording-label-wrap" data-tauri-drag-region>
+                <span className="recording-label">
+                    {state === 'processing' ? 'Processing' : state === 'cancelling' ? 'Cancelling' : 'Listening'}
+                </span>
+                {state === 'listening' && (
+                    <span className="recording-hint">Hold Alt to cancel</span>
+                )}
+            </div>
             <div className="wave-bars" data-tauri-drag-region>
                 {bars.map((barLevel, index) => (
                     <span

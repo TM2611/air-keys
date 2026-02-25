@@ -6,7 +6,9 @@ use async_trait::async_trait;
 pub enum AudioProcessorError {
     #[error("missing deepgram api key")]
     MissingApiKey,
-    #[error("transcription request failed: {0}")]
+    #[error("missing gemini api key")]
+    MissingGeminiApiKey,
+    #[error("audio processing request failed: {0}")]
     Request(String),
     #[error("transcription response was empty")]
     EmptyTranscript,
@@ -15,4 +17,9 @@ pub enum AudioProcessorError {
 #[async_trait]
 pub trait AudioProcessor: Send + Sync {
     async fn process_file(&self, audio_path: &Path) -> Result<String, AudioProcessorError>;
+}
+
+#[async_trait]
+pub trait TranscriptCleaner: Send + Sync {
+    async fn clean(&self, transcript: &str) -> Result<String, AudioProcessorError>;
 }

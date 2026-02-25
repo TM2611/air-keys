@@ -12,11 +12,18 @@ pub trait SecureKeyStore: Send + Sync {
     async fn save_deepgram_key(&self, api_key: String) -> Result<()>;
     async fn read_deepgram_key(&self) -> Result<Option<String>>;
     async fn clear_deepgram_key(&self) -> Result<()>;
+    async fn save_gemini_key(&self, api_key: String) -> Result<()>;
+    async fn read_gemini_key(&self) -> Result<Option<String>>;
+    async fn clear_gemini_key(&self) -> Result<()>;
+    async fn save_processing_enabled(&self, enabled: bool) -> Result<()>;
+    async fn read_processing_enabled(&self) -> Result<bool>;
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 struct KeyData {
     deepgram_api_key: Option<String>,
+    gemini_api_key: Option<String>,
+    processing_enabled: Option<bool>,
 }
 
 pub struct StrongholdStore {
@@ -72,5 +79,33 @@ impl SecureKeyStore for StrongholdStore {
         let mut data = self.data.lock().await;
         data.deepgram_api_key = None;
         Self::persist(&self.file_path, &data)
+    }
+
+    async fn save_gemini_key(&self, api_key: String) -> Result<()> {
+        let mut data = self.data.lock().await;
+        data.gemini_api_key = Some(api_key);
+        Self::persist(&self.file_path, &data)
+    }
+
+    async fn read_gemini_key(&self) -> Result<Option<String>> {
+        let data = self.data.lock().await;
+        Ok(data.gemini_api_key.clone())
+    }
+
+    async fn clear_gemini_key(&self) -> Result<()> {
+        let mut data = self.data.lock().await;
+        data.gemini_api_key = None;
+        Self::persist(&self.file_path, &data)
+    }
+
+    async fn save_processing_enabled(&self, enabled: bool) -> Result<()> {
+        let mut data = self.data.lock().await;
+        data.processing_enabled = Some(enabled);
+        Self::persist(&self.file_path, &data)
+    }
+
+    async fn read_processing_enabled(&self) -> Result<bool> {
+        let data = self.data.lock().await;
+        Ok(data.processing_enabled.unwrap_or(false))
     }
 }
