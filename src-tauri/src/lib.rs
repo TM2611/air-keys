@@ -5,6 +5,7 @@ mod injection;
 mod processors;
 mod settings;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use core::orchestrator::DictationOrchestrator;
@@ -13,8 +14,9 @@ use processors::deepgram::DeepgramProcessor;
 use processors::gemini::GeminiCleaner;
 use settings::commands::{
     clear_deepgram_api_key, clear_gemini_api_key, get_launch_on_startup_enabled,
-    get_processing_enabled, has_deepgram_api_key, has_gemini_api_key, save_deepgram_api_key,
-    save_gemini_api_key, set_launch_on_startup_enabled, set_processing_enabled, SettingsState,
+    get_logging_enabled, get_processing_enabled, has_deepgram_api_key, has_gemini_api_key,
+    save_deepgram_api_key, save_gemini_api_key, set_launch_on_startup_enabled,
+    set_logging_enabled, set_processing_enabled, SettingsState,
 };
 use settings::stronghold_store::StrongholdStore;
 use tauri::image::Image;
@@ -22,6 +24,7 @@ use tauri::menu::MenuBuilder;
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_log::{Target, TargetKind};
 
 const TRAY_ID: &str = "air_keys_tray";
 const MENU_SETTINGS: &str = "settings";
@@ -29,6 +32,7 @@ const MENU_QUIT: &str = "quit";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // tracing_subscriber::fmt::init();
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -37,15 +41,41 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
 
+            let key_store = Arc::new(StrongholdStore::new(&app_handle)?);
+
+            let version = app.package_info().version.to_string();
+            let log_file_name = format!("air-keys-{}", version);
+
             if cfg!(debug_assertions) {
+                let log_dir = std::env::current_dir()
+                    .unwrap_or_else(|_| PathBuf::from("."))
+                    .join("logs");
+                let _ = std::fs::create_dir_all(&log_dir);
                 app_handle.plugin(
                     tauri_plugin_log::Builder::default()
+                        .clear_targets()
                         .level(log::LevelFilter::Info)
+                        .filter(|metadata| !metadata.target().contains("tao"))
+                        .target(Target::new(TargetKind::Stdout))
+                        .target(Target::new(TargetKind::Folder {
+                            path: log_dir,
+                            file_name: Some(log_file_name),
+                        }))
                         .build(),
                 )?;
+            } else {
+                let logging_enabled = key_store.read_logging_enabled_blocking();
+                let mut builder = tauri_plugin_log::Builder::default()
+                    .clear_targets()
+                    .level(log::LevelFilter::Info)
+                    .filter(|metadata| !metadata.target().contains("tao"));
+                if logging_enabled {
+                    builder = builder.target(Target::new(TargetKind::LogDir {
+                        file_name: Some(log_file_name),
+                    }));
+                }
+                app_handle.plugin(builder.build())?;
             }
-
-            let key_store = Arc::new(StrongholdStore::new(&app_handle)?);
             let processor = Arc::new(DeepgramProcessor::new(key_store.clone()));
             let cleaner = Arc::new(GeminiCleaner::new(key_store.clone()));
             let orchestrator = Arc::new(DictationOrchestrator::new(
@@ -105,6 +135,8 @@ pub fn run() {
             has_gemini_api_key,
             get_processing_enabled,
             set_processing_enabled,
+            get_logging_enabled,
+            set_logging_enabled,
             get_launch_on_startup_enabled,
             set_launch_on_startup_enabled
         ])

@@ -106,6 +106,27 @@ pub async fn set_processing_enabled(
 }
 
 #[tauri::command]
+pub async fn get_logging_enabled(state: State<'_, SettingsState>) -> Result<bool, String> {
+    state
+        .store
+        .read_logging_enabled()
+        .await
+        .map_err(|err| format!("failed to read logging setting: {err}"))
+}
+
+#[tauri::command]
+pub async fn set_logging_enabled(
+    state: State<'_, SettingsState>,
+    enabled: bool,
+) -> Result<(), String> {
+    state
+        .store
+        .save_logging_enabled(enabled)
+        .await
+        .map_err(|err| format!("failed to update logging setting: {err}"))
+}
+
+#[tauri::command]
 pub fn get_launch_on_startup_enabled(app: AppHandle) -> Result<bool, String> {
     app.autolaunch()
         .is_enabled()

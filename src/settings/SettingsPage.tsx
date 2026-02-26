@@ -45,6 +45,9 @@ export function SettingsPage() {
     const [isCheckingProcessingEnabled, setIsCheckingProcessingEnabled] = useState(true)
     const [isCheckingLaunchOnStartup, setIsCheckingLaunchOnStartup] = useState(true)
     const [isSavingLaunchOnStartup, setIsSavingLaunchOnStartup] = useState(false)
+    const [loggingEnabled, setLoggingEnabled] = useState(false)
+    const [isCheckingLoggingEnabled, setIsCheckingLoggingEnabled] = useState(true)
+    const [isSavingLoggingEnabled, setIsSavingLoggingEnabled] = useState(false)
     const [isSavingProcessingEnabled, setIsSavingProcessingEnabled] = useState(false)
     const [deepgramSaveState, setDeepgramSaveState] = useState<SaveState>('idle')
     const [geminiSaveState, setGeminiSaveState] = useState<SaveState>('idle')
@@ -102,6 +105,19 @@ export function SettingsPage() {
         }
     }
 
+    const refreshLoggingEnabled = async () => {
+        setIsCheckingLoggingEnabled(true)
+        try {
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            const enabled = await invoke<boolean>('get_logging_enabled')
+            setLoggingEnabled(enabled)
+        } finally {
+            setIsCheckingLoggingEnabled(false)
+        }
+    }
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
             void Promise.all([
@@ -109,6 +125,7 @@ export function SettingsPage() {
                 refreshLaunchOnStartup(),
                 refreshGeminiKeyStatus(),
                 refreshProcessingEnabled(),
+                refreshLoggingEnabled(),
                 getVersion().then((version) => setAppVersion(version)),
             ]).catch((error) => {
                 setDeepgramSaveState('error')
@@ -266,6 +283,22 @@ export function SettingsPage() {
         }
     }
 
+    async function onLoggingEnabledChange(enabled: boolean) {
+        try {
+            setIsSavingLoggingEnabled(true)
+            setErrorMessage('')
+            if (!hasTauriInvoke()) {
+                throw new Error('Tauri runtime unavailable. Open this UI from the Air Keys tray app.')
+            }
+            await invoke('set_logging_enabled', { enabled })
+            setLoggingEnabled(enabled)
+        } catch (error) {
+            setErrorMessage(`Air Keys could not update logging: ${parseInvokeError(error)}`)
+        } finally {
+            setIsSavingLoggingEnabled(false)
+        }
+    }
+
     return (
         <main className="settings-shell">
             <h1>Air Keys settings</h1>
@@ -336,6 +369,23 @@ export function SettingsPage() {
                     {isCheckingLaunchOnStartup
                         ? 'Checking startup setting...'
                         : 'When enabled, Air Keys starts when you sign in to Windows.'}
+                </p>
+                <label className="settings-checkbox settings-checkbox-spaced" htmlFor="loggingEnabled">
+                    <input
+                        id="loggingEnabled"
+                        type="checkbox"
+                        checked={loggingEnabled}
+                        disabled={isCheckingLoggingEnabled || isSavingLoggingEnabled}
+                        onChange={(event) => {
+                            void onLoggingEnabledChange(event.target.checked)
+                        }}
+                    />
+                    Store logs to file
+                </label>
+                <p className="settings-muted">
+                    {isCheckingLoggingEnabled
+                        ? 'Checking logging setting...'
+                        : 'When enabled, logs are saved to disk (does not include audio or transcripts). Takes effect on next launch.'}
                 </p>
             </section>
 

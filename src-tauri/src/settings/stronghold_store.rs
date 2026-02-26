@@ -17,6 +17,8 @@ pub trait SecureKeyStore: Send + Sync {
     async fn clear_gemini_key(&self) -> Result<()>;
     async fn save_processing_enabled(&self, enabled: bool) -> Result<()>;
     async fn read_processing_enabled(&self) -> Result<bool>;
+    async fn save_logging_enabled(&self, enabled: bool) -> Result<()>;
+    async fn read_logging_enabled(&self) -> Result<bool>;
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
@@ -24,6 +26,7 @@ struct KeyData {
     deepgram_api_key: Option<String>,
     gemini_api_key: Option<String>,
     processing_enabled: Option<bool>,
+    logging_enabled: Option<bool>,
 }
 
 pub struct StrongholdStore {
@@ -52,6 +55,14 @@ impl StrongholdStore {
             file_path,
             data: Mutex::new(data),
         })
+    }
+
+    /// Synchronous read for use during app setup (before the async runtime is available).
+    pub fn read_logging_enabled_blocking(&self) -> bool {
+        self.data
+            .try_lock()
+            .map(|data| data.logging_enabled.unwrap_or(false))
+            .unwrap_or(false)
     }
 
     fn persist(file_path: &PathBuf, data: &KeyData) -> Result<()> {
@@ -107,5 +118,16 @@ impl SecureKeyStore for StrongholdStore {
     async fn read_processing_enabled(&self) -> Result<bool> {
         let data = self.data.lock().await;
         Ok(data.processing_enabled.unwrap_or(false))
+    }
+
+    async fn save_logging_enabled(&self, enabled: bool) -> Result<()> {
+        let mut data = self.data.lock().await;
+        data.logging_enabled = Some(enabled);
+        Self::persist(&self.file_path, &data)
+    }
+
+    async fn read_logging_enabled(&self) -> Result<bool> {
+        let data = self.data.lock().await;
+        Ok(data.logging_enabled.unwrap_or(false))
     }
 }

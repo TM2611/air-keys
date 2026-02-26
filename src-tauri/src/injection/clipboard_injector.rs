@@ -1,7 +1,10 @@
+use std::time::Instant;
+
 use anyhow::Result;
 use arboard::Clipboard;
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use tokio::time::{sleep, Duration};
+use tracing::instrument;
 
 const PASTE_SETTLE_DELAY_MS: u64 = 120;
 
@@ -12,7 +15,9 @@ impl ClipboardInjector {
         Self
     }
 
+    #[instrument(skip(self, transcript), fields(transcript_len = transcript.len()))]
     pub async fn inject_text(&self, transcript: &str) -> Result<()> {
+        let start = Instant::now();
         let mut clipboard = Clipboard::new()?;
         let cached_text = clipboard.get_text().ok();
 
@@ -34,6 +39,11 @@ impl ClipboardInjector {
                 let _ = clipboard.clear();
             }
         }
+        
+        log::info!(
+            "clipboard injection completed in {}ms",
+            start.elapsed().as_millis()
+        );
         Ok(())
     }
 }

@@ -93,6 +93,10 @@
   margin: 0;
 }
 
+.settings-checkbox-spaced {
+  margin-top: 0.75rem;
+}
+
 .settings-muted {
   margin: 0.45rem 0 0;
   color: #64748b;

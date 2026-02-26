@@ -9,6 +9,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
+use tracing::instrument;
 
 use crate::audio::recorder::Recorder;
 use crate::core::audio_processor::{AudioProcessor, AudioProcessorError, TranscriptCleaner};
@@ -227,8 +228,11 @@ impl DictationOrchestrator {
         }
     }
 
+    #[instrument(skip(self, transcript), fields(transcript_len = transcript.len()))]
     async fn clean_and_inject(&self, transcript: String) -> Result<()> {
+        let total_start = Instant::now();
         let should_clean = self.key_store.read_processing_enabled().await?;
+        let clean_start = Instant::now();
         let transcript_to_inject = if should_clean {
             match self.cleaner.clean(&transcript).await {
                 Ok(cleaned) => cleaned,
@@ -244,8 +248,18 @@ impl DictationOrchestrator {
         } else {
             transcript
         };
+        let clean_duration = clean_start.elapsed();
 
+        let inject_start = Instant::now();
         self.injector.inject_text(&transcript_to_inject).await?;
+        let inject_duration = inject_start.elapsed();
+        let total_duration = total_start.elapsed();
+        log::info!(
+            "clean_and_inject completed total={}ms clean={}ms inject={}ms",
+            total_duration.as_millis(),
+            clean_duration.as_millis(),
+            inject_duration.as_millis()
+        );
         Ok(())
     }
 }
